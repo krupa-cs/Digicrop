@@ -1,0 +1,182 @@
+{
+	"info": {
+		"_postman_id": "d0f98394-b2cc-4971-88f6-df3057e937d7",
+		"name": "Digicrop API",
+		"description": "Collection for testing Digicrop Backend API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get Plot Timeseries (Success)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/v1/crop-sensor-data/PLOT#001",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"crop-sensor-data",
+						"PLOT#001"
+					]
+				},
+				"description": "Retrieves the timeseries data for a valid plot."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Plot Timeseries (Not Found)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/v1/crop-sensor-data/INVALID_PLOT",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"crop-sensor-data",
+						"INVALID_PLOT"
+					]
+				},
+				"description": "Attempts to retrieve data for a plot that does not exist, expecting a 404 response."
+			},
+			"response": []
+		},
+		{
+			"name": "Ingest Sensor Data (Success)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"PK\": \"PLOT#001\",\n  \"SK\": \"TS#2026-06-03\",\n  \"date\": \"2026-06-03\",\n  \"temp\": 34.0,\n  \"humidity\": 60.5,\n  \"rainfall\": 0.0,\n  \"wind_speed\": 15.1,\n  \"N\": 43.0,\n  \"P\": 28.5,\n  \"K\": 58.0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/v1/crop-sensor-data",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"crop-sensor-data"
+					]
+				},
+				"description": "Creates a new sensor telemetry record."
+			},
+			"response": []
+		},
+		{
+			"name": "Ingest Sensor Data (Validation Error)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"PK\": \"PLOT#001\",\n  \"SK\": \"TS#2026-06-04\",\n  \"date\": \"INVALID_DATE_FORMAT\",\n  \"temp\": 34.0,\n  \"humidity\": 150.0,\n  \"rainfall\": -5.0,\n  \"wind_speed\": 15.1,\n  \"N\": 43.0,\n  \"P\": 28.5,\n  \"K\": 58.0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/v1/crop-sensor-data",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"crop-sensor-data"
+					]
+				},
+				"description": "Attempts to send invalid data (bad date format, out of range humidity and rainfall), expecting a 422 Unprocessable Entity."
+			},
+			"response": []
+		},
+		{
+			"name": "Ingest Sensor Data (Duplicate Conflict)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"PK\": \"PLOT#001\",\n  \"SK\": \"TS#2026-06-01\",\n  \"date\": \"2026-06-01\",\n  \"temp\": 32.5,\n  \"humidity\": 65.0,\n  \"rainfall\": 12.0,\n  \"wind_speed\": 14.2,\n  \"N\": 45.0,\n  \"P\": 30.0,\n  \"K\": 60.0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8000/api/v1/crop-sensor-data",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"v1",
+						"crop-sensor-data"
+					]
+				},
+				"description": "Attempts to insert a record that already exists (PK: PLOT#001, SK: TS#2026-06-01), expecting a 409 Conflict."
+			},
+			"response": []
+		}
+	]
+}

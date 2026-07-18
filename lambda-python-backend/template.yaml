@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Python backend migration from Node.js
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.12
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref BackendTable
+
+Resources:
+  BackendTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-BackendTable"
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  CreateItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers.create_item.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BackendTable
+      Events:
+        CreateItem:
+          Type: Api
+          Properties:
+            Path: /items
+            Method: post
+
+  GetItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers.get_item.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BackendTable
+      Events:
+        GetItem:
+          Type: Api
+          Properties:
+            Path: /items/{PK}/{SK}
+            Method: get
+
+  UpdateItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers.update_item.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BackendTable
+      Events:
+        UpdateItem:
+          Type: Api
+          Properties:
+            Path: /items/{PK}/{SK}
+            Method: put
+
+  DeleteItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers.delete_item.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BackendTable
+      Events:
+        DeleteItem:
+          Type: Api
+          Properties:
+            Path: /items/{PK}/{SK}
+            Method: delete
