@@ -1,9 +1,11 @@
 import json
 import os
 import tempfile
+import threading
 from typing import List, Dict, Any, Optional
 
 DB_FILE = "plot_sensor_data.json"
+_db_lock = threading.Lock()
 
 def load_db() -> Dict[str, Any]:
     """
@@ -65,10 +67,11 @@ def insert_record(record: Dict[str, Any]) -> None:
     """
     Append a new record to the timeseries database.
     """
-    data = load_db()
-    
-    if "timeseries" not in data:
-        data["timeseries"] = []
+    with _db_lock:
+        data = load_db()
         
-    data["timeseries"].append(record)
-    save_db(data)
+        if "timeseries" not in data:
+            data["timeseries"] = []
+            
+        data["timeseries"].append(record)
+        save_db(data)
