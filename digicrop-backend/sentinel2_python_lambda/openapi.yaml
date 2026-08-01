@@ -1,0 +1,200 @@
+openapi: 3.0.3
+info:
+  title: Sentinel-2 AWS Lambda API
+  version: 1.0.0
+  description: >
+    API documentation for the Sentinel-2 Data Management AWS Lambda.
+    This API allows saving Sentinel-2 band data into Amazon S3 and retrieving
+    the data based on serial numbers and data types.
+servers:
+  - url: https://api.example.com/v1
+    description: Production API Gateway
+
+paths:
+  /data:
+    post:
+      summary: Save Sentinel-2 Data
+      description: Uploads new Sentinel-2 data to an S3 bucket in a structured JSON format.
+      operationId: saveSentinel2Data
+      requestBody:
+        description: Sentinel-2 data payload to be saved.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - serialNumber
+                - dataType
+                - result
+              properties:
+                serialNumber:
+                  type: string
+                  description: Unique identifier for the Sentinel-2 data batch.
+                dataType:
+                  type: string
+                  description: The type of data being uploaded.
+                result:
+                  type: object
+                  description: The actual data or measurements to store.
+                  additionalProperties: true
+            examples:
+              validPayload:
+                summary: Valid Data Payload
+                value:
+                  serialNumber: "S180H120L126-02-1220:47:59"
+                  dataType: "SENTINEL2"
+                  result:
+                    band1: 0.45
+                    band2: 0.67
+                    band3: 0.88
+      responses:
+        '200':
+          description: Data saved successfully to S3.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  key:
+                    type: string
+                    description: The S3 key where the data was saved.
+              example:
+                success: true
+                message: "Data saved to S3"
+                key: "sentinel2/S180H120L126-02-1220:47:59/S180H120L126-02-1220:47:59.json"
+        '400':
+          description: Bad request. Missing required fields in the request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "serialNumber, dataType and result required"
+        '405':
+          description: Method Not Allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Method not allowed"
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Internal server error message"
+                stack: "Traceback details..."
+
+    get:
+      summary: Fetch Sentinel-2 Data
+      description: >
+        Retrieves all JSON objects from the S3 bucket for a specific
+        serial number and data type. Reads every object under the prefix
+        `{dataType_lowercase}/{serialNumber}/`.
+      operationId: fetchSentinel2Data
+      parameters:
+        - name: serialNumber
+          in: query
+          description: Unique identifier to fetch data for.
+          required: true
+          schema:
+            type: string
+          example: "S180H120L126-02-1220:47:59"
+        - name: dataType
+          in: query
+          description: The type of data to fetch.
+          required: true
+          schema:
+            type: string
+          example: "SENTINEL2"
+      responses:
+        '200':
+          description: Successfully fetched data objects.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                    description: Number of files retrieved.
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+              example:
+                success: true
+                count: 1
+                data:
+                  - serialNumber: "S180H120L126-02-1220:47:59"
+                    dataType: "SENTINEL2"
+                    timestamp: "2026-08-01T10:30:00.000Z"
+                    result:
+                      band1: 0.45
+                      band2: 0.67
+        '400':
+          description: Bad request. Missing query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "serialNumber and dataType required"
+        '404':
+          description: No data found for the given criteria.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "No data found"
+        '405':
+          description: Method Not Allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Method not allowed"
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Internal server error message"
+                stack: "Traceback details..."
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error description
+        stack:
+          type: string
+          description: Stack trace (optional, returned on 500 errors)

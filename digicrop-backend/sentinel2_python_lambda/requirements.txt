@@ -1,0 +1,2 @@
+# Required libraries for Sentinel-2 Python Lambda
+boto3>=1.34.0
