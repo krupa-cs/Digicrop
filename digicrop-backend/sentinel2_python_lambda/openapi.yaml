@@ -1,11 +1,10 @@
 openapi: 3.0.3
 info:
-  title: Sentinel-2 AWS Lambda API
+  title: Digicrop AWS Lambda APIs
   version: 1.0.0
   description: >
-    API documentation for the Sentinel-2 Data Management AWS Lambda.
-    This API allows saving Sentinel-2 band data into Amazon S3 and retrieving
-    the data based on serial numbers and data types.
+    API documentation for the Digicrop AWS Lambda functions, including
+    Sentinel-2 Data Management and NDVI Historical Data.
 servers:
   - url: https://api.example.com/v1
     description: Production API Gateway
@@ -141,11 +140,11 @@ paths:
                 count: 1
                 data:
                   - serialNumber: "S180H120L126-02-1220:47:59"
-                    dataType: "SENTINEL2"
-                    timestamp: "2026-08-01T10:30:00.000Z"
-                    result:
-                      band1: 0.45
-                      band2: 0.67
+                  dataType: "SENTINEL2"
+                  timestamp: "2026-08-01T10:30:00.000Z"
+                  result:
+                    band1: 0.45
+                    band2: 0.67
         '400':
           description: Bad request. Missing query parameters.
           content:
@@ -183,6 +182,104 @@ paths:
                 success: false
                 message: "Internal server error message"
                 stack: "Traceback details..."
+
+  /ndvi:
+    get:
+      summary: Fetch NDVI Historical Data
+      description: >
+        Retrieves the latest NDVI historical data for a specific plot ID.
+      operationId: fetchNDVIHistoricalData
+      parameters:
+        - name: PK
+          in: query
+          description: Partition key for the data (e.g., plot prefix).
+          required: true
+          schema:
+            type: string
+          example: "PLOT#123"
+        - name: PlotId
+          in: query
+          description: The unique identifier of the plot.
+          required: true
+          schema:
+            type: string
+          example: "001"
+      responses:
+        '200':
+          description: Successfully fetched NDVI data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payload:
+                    type: object
+                    description: The historical NDVI data payload.
+                    additionalProperties: true
+              example:
+                payload:
+                  PK: "PLOT#123"
+                  SK: "PD-001#2026-08-07"
+                  SerialNumber: "SN-999"
+                  Date: "2026-08-07"
+                  CropType: "Corn"
+                  SoilType: "Clay"
+                  PlotId: "001"
+                  PlotLocation: "Field A"
+                  latitude: 34.05
+                  longitude: -118.24
+                  NDVI: 0.75
+                  polygonPoints: []
+                  totalPixels: 100
+                  pixelNDVIGrid: []
+                  weather:
+                    temperature: 25.5
+                    humidity: 60
+                    uvIndex: 8
+                    rainfall: 0
+                    sunrise: "06:00:00"
+                    sunset: "19:00:00"
+                    maxTemperature: 30.0
+                    minTemperature: 20.0
+                    maxHeatIndex: 32.0
+                    windSpeed: 10.5
+                    windDirection: "NW"
+        '400':
+          description: Bad request. Missing PK or PlotId.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "PK and PlotId are required"
+        '404':
+          description: No NDVI data found for this plot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "No NDVI data found for this plot"
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  error:
+                    type: string
+              example:
+                message: "Internal server error"
+                error: "Error details"
 
 components:
   schemas:
