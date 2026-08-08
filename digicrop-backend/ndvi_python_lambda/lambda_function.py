@@ -1,6 +1,7 @@
 import json
 import logging
 import boto3
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 from boto3.dynamodb.conditions import Key
 
@@ -28,6 +29,15 @@ def safe_get(data: dict, *keys: str) -> Any:
             return None
     return current
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            # Convert to int if it has no fractional part, else float
+            if obj % 1 == 0:
+                return int(obj)
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
 def build_response(status_code: int, body_data: dict) -> dict:
     """
     Constructs the HTTP response required by API Gateway.
@@ -38,7 +48,7 @@ def build_response(status_code: int, body_data: dict) -> dict:
             "Access-Control-Allow-Origin": "*",
             "Content-Type": "application/json",
         },
-        "body": json.dumps(body_data)
+        "body": json.dumps(body_data, cls=DecimalEncoder)
     }
 
 def build_weather(item: dict) -> dict:
