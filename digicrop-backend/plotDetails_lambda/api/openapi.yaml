@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: Blob Data Lambda API
+  title: Plot Details Lambda API
   description: |
     API documentation for saving plot details. 
     **Note**: The API Gateway route/method must be configured according to the deployment, as the Lambda receives a direct event object. No specific REST methods (GET, PUT, etc.) are dictated by the Lambda itself.
