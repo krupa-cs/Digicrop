@@ -1,0 +1,120 @@
+openapi: 3.0.0
+info:
+  title: Blob Data Lambda API
+  description: |
+    API documentation for saving plot details. 
+    **Note**: The API Gateway route/method must be configured according to the deployment, as the Lambda receives a direct event object. No specific REST methods (GET, PUT, etc.) are dictated by the Lambda itself.
+  version: 1.0.0
+paths:
+  /:
+    post:
+      summary: Save plot details
+      description: Endpoint to save plot details directly invoking the Lambda. (Method configured via API Gateway)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlotDetailsRequest'
+      responses:
+        '200':
+          description: Plot saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+
+components:
+  schemas:
+    PlotDetailsRequest:
+      type: object
+      required:
+        - userId
+        - date
+        - name
+        - latitude
+        - longitude
+        - cropType
+        - serialNumber
+        - soilType
+        - plotLocation
+        - root_depth
+        - Irrigation_efficiency
+        - target_yield_t_acre
+        - fertilizer_application_method
+        - area_of_field_acre
+        - age_years
+        - plant_density_per_acre
+      properties:
+        userId:
+          type: string
+        date:
+          type: string
+        name:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        cropType:
+          type: string
+        variety:
+          type: string
+        serialNumber:
+          type: string
+        soilType:
+          type: string
+        plotLocation:
+          type: string
+        polygonPoints:
+          type: array
+          items:
+            type: object
+          description: Optional, defaults to empty array [] if omitted
+        root_depth:
+          type: number
+        Irrigation_efficiency:
+          type: number
+        target_yield_t_acre:
+          type: number
+        fertilizer_application_method:
+          type: string
+        area_of_field_acre:
+          type: number
+        age_years:
+          type: number
+        plant_density_per_acre:
+          type: number
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Plot saved successfully"
+        plotId:
+          type: string
+          example: "abc-123-def"
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Missing required fields"
+    ServerErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "DynamoDB error details"
