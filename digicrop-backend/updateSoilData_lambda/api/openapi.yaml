@@ -1,0 +1,65 @@
+openapi: 3.0.0
+info:
+  title: Update Soil Data API
+  version: 1.0.0
+  description: API to update soil-related information for an existing plot.
+paths:
+  /updateSoilData:
+    post:
+      summary: Update soil data for a plot
+      operationId: updateSoilData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - plotId
+              properties:
+                userId:
+                  type: string
+                  example: "USER123"
+                plotId:
+                  type: string
+                  example: "abc456"
+                soil_ph:
+                  type: number
+                  example: 6.5
+                e_c:
+                  type: number
+                  example: 1.2
+                organic_carbon:
+                  type: number
+                  example: 2.5
+                soil_test:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Successful update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    description: The fully updated DynamoDB item
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Error message details"
