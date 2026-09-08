@@ -1,0 +1,68 @@
+openapi: 3.0.1
+info:
+  title: Update Plot API
+  version: 1.0.0
+paths:
+  /plot/{plotId}:
+    put:
+      summary: Update Plot
+      description: Updates an existing plot dynamically.
+      parameters:
+        - name: plotId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the plot to update (can also be passed as query parameter).
+        - name: plotId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: The ID of the plot to update (path parameter takes priority if both are provided).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: The user ID (partition key)
+              additionalProperties: true
+              description: Any additional properties provided will be used as dynamic update fields.
+      responses:
+        "200":
+          description: Plot updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Plot updated successfully"
+                  data:
+                    type: object
+                    description: The fully updated DynamoDB item
+        "400":
+          description: Bad Request (missing body, plotId, userId, or update fields)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
