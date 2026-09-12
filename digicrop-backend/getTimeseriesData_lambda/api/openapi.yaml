@@ -1,0 +1,53 @@
+openapi: 3.0.0
+info:
+  title: Get Timeseries Data API
+  description: Retrieve historical NDVI and weather time-series data for a plot.
+  version: 1.0.0
+paths:
+  /data:
+    get:
+      summary: Get timeseries data
+      description: Retrieves historical time-series data between start and end dates.
+      parameters:
+        - name: PK
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: PlotId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  startDate:
+                    type: string
+                  endDate:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error

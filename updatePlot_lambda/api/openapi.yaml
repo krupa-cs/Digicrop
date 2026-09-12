@@ -1,0 +1,74 @@
+openapi: 3.0.0
+info:
+  title: Update Plot API
+  description: API to dynamically update plot transaction data in DynamoDB.
+  version: 1.0.0
+paths:
+  /plot/{plotId}:
+    put:
+      summary: Update a plot
+      description: Updates plot details. The plotId can be provided in the path or as a query parameter.
+      parameters:
+        - name: plotId
+          in: path
+          required: false
+          description: Plot ID to update (Takes priority over query parameter)
+          schema:
+            type: string
+        - name: plotId
+          in: query
+          required: false
+          description: Plot ID to update (Used if path parameter is missing)
+          schema:
+            type: string
+      requestBody:
+        description: Plot update payload. userId is required. Any other fields provided are dynamically updated.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  description: The ID of the user.
+              additionalProperties: true
+            example:
+              userId: "user123"
+              cropType: "Cotton"
+              soilType: "Black Soil"
+      responses:
+        '200':
+          description: Plot updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Plot updated successfully
+                  data:
+                    type: object
+                    description: The complete updated DynamoDB item.
+        '400':
+          description: Bad request (Missing plotId, userId, or update fields)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: plotId is required
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
