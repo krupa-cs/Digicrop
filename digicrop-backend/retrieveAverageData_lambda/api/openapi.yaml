@@ -1,0 +1,65 @@
+openapi: 3.0.3
+
+info:
+  title: retrieveAverageData API
+  description: >
+    Retrieves data from the RawData DynamoDB table based on
+    SerialNumber and a date range.
+  version: 1.0.0
+
+paths:
+  /retrieveAverageData:
+    get:
+      summary: Retrieve Average Data
+      description: >
+        Retrieves RawData records for a SerialNumber and date range.
+        For date ranges shorter than 20 days, the normal sort-key
+        range is queried. For ranges of 20 days or more,
+        the DialyAverage- sort-key prefix is used.
+
+      parameters:
+        - name: SerialNumber
+          in: query
+          required: true
+          description: Device serial number.
+          schema:
+            type: string
+
+        - name: startDate
+          in: query
+          required: true
+          description: Start date.
+          schema:
+            type: string
+            example: "2026-08-01"
+
+        - name: endDate
+          in: query
+          required: true
+          description: End date.
+          schema:
+            type: string
+            example: "2026-08-10"
+
+      responses:
+        "200":
+          description: Data retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  body:
+                    type: array
+                    items:
+                      type: object
+
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  body:
+                    type: string
