@@ -1,0 +1,42 @@
+openapi: 3.0.3
+info:
+  title: tokenToDB Lambda API
+  version: 1.0.0
+paths:
+  /tokenToDB:
+    post:
+      summary: Updates or creates an Expo push notification token for a user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userID:
+                  type: string
+                  example: "user123"
+                tokenId:
+                  type: string
+                  example: "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+              required:
+                - userID
+                - tokenId
+      responses:
+        '200':
+          description: Existing token updated, or new token created.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    description: Existing token updated, response contains statusCode and updated DynamoDB attributes.
+                  - type: string
+                    example: "Successfully created Item"
+        '500':
+          description: Error updating or creating item.
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Error updating or creating item"

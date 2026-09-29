@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Getuserdetailsloginform Lambda API
+  version: 1.0.0
+paths:
+  /Getuserdetailsloginform:
+    get:
+      summary: Retrieve user details from Amazon Cognito User Pool
+      parameters:
+        - in: query
+          name: username
+          required: true
+          schema:
+            type: string
+          example: "example-user"
+      responses:
+        '200':
+          description: User attributes retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  body:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        Name:
+                          type: string
+                          example: "email"
+                        Value:
+                          type: string
+                          example: "user@example.com"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 500
+                  body:
+                    type: string
+                    example: "Internal Server Error"
