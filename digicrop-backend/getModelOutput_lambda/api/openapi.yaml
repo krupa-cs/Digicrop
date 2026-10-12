@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: getModelOutput Lambda API
+  version: 1.0.0
+  description: >
+    API for storing and fetching crop analysis and model outputs (e.g. NDVI)
+    in DynamoDB table CGIModelResults. Migrated from Node.js to Python.
+paths:
+  /getModelOutput:
+    post:
+      summary: Save model output
+      description: Saves an analysis result item to the CGIModelResults DynamoDB table.
+      operationId: saveModelOutput
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveModelOutputRequest'
+            example:
+              userId: "user123"
+              serialNumber: "SN123456"
+              dataType: "NDVI"
+              timestamp: "2026-10-12T10:30:00Z"
+              payload:
+                result: "example"
+      responses:
+        '200':
+          description: Data saved successfully
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveModelOutputResponse'
+        '400':
+          description: Missing required fields
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Missing required fields"
+        '500':
+          description: Internal server error
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+    get:
+      summary: Fetch model output
+      description: >
+        Fetches model results. Callers must provide either both `serialNumber` and `dataType` (Mode A)
+        or `userId` (Mode B). If both `serialNumber` and `dataType` are supplied, Mode A takes precedence.
+      operationId: getModelOutput
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          description: Unique user ID (required for Mode B).
+          schema:
+            type: string
+            example: "user123"
+        - name: serialNumber
+          in: query
+          required: false
+          description: Sensor or device serial number (required with dataType for Mode A).
+          schema:
+            type: string
+            example: "SN123456"
+        - name: dataType
+          in: query
+          required: false
+          description: Model data type (e.g. NDVI). Used in Mode A query or as Mode B filter.
+          schema:
+            type: string
+            example: "NDVI"
+        - name: date
+          in: query
+          required: false
+          description: Date or timestamp prefix to filter results (e.g. 2026-10-12).
+          schema:
+            type: string
+            example: "2026-10-12"
+      responses:
+        '200':
+          description: Query results returned successfully
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetModelOutputResponse'
+        '400':
+          description: Required query mode not supplied
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Either userId OR serialNumber+dataType required"
+        '500':
+          description: Internal server error
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+    put:
+      summary: Unsupported method
+      description: Returns HTTP 405 Method Not Allowed.
+      responses:
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+    delete:
+      summary: Unsupported method
+      description: Returns HTTP 405 Method Not Allowed.
+      responses:
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+    patch:
+      summary: Unsupported method
+      description: Returns HTTP 405 Method Not Allowed.
+      responses:
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+
+components:
+  responses:
+    MethodNotAllowed:
+      description: HTTP method not allowed
+      headers:
+        Access-Control-Allow-Origin:
+          schema:
+            type: string
+            example: "*"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "Method not allowed"
+
+  schemas:
+    SaveModelOutputRequest:
+      type: object
+      required:
+        - userId
+        - serialNumber
+        - dataType
+        - timestamp
+        - payload
+      properties:
+        userId:
+          type: string
+          example: "user123"
+        serialNumber:
+          type: string
+          example: "SN123456"
+        dataType:
+          type: string
+          example: "NDVI"
+        timestamp:
+          type: string
+          example: "2026-10-12T10:30:00Z"
+        payload:
+          type: object
+          description: Arbitrary model output payload
+          example:
+            result: "example"
+
+    ModelOutputItem:
+      type: object
+      properties:
+        PK:
+          type: string
+          example: "user123"
+        SK:
+          type: string
+          example: "2026-10-12T10:30:00Z#SN123456#NDVI"
+        serialNumber:
+          type: string
+          example: "SN123456"
+        dataType:
+          type: string
+          example: "NDVI"
+        timestamp:
+          type: string
+          example: "2026-10-12T10:30:00Z"
+        payload:
+          type: object
+          example:
+            result: "example"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-10-12T16:00:00.000000Z"
+
+    SaveModelOutputResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Data saved successfully"
+        item:
+          $ref: '#/components/schemas/ModelOutputItem'
+
+    GetModelOutputResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelOutputItem'
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Missing required fields"
+
+    ServerErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Internal server error"
+        error:
+          type: string
+          example: "Error message details"

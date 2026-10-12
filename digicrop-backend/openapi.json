@@ -1,0 +1,1766 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DigiCrop Lambda APIs",
+    "version": "1.0.0",
+    "description": "Consolidated API documentation for the migrated DigiCrop AWS Lambda functions. Each endpoint corresponds to a Lambda function that has been migrated from Node.js to Python."
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com",
+      "description": "Production API Gateway"
+    }
+  ],
+  "paths": {
+    "/telemetryData": {
+      "get": {
+        "summary": "Get Telemetry Data",
+        "description": "Retrieves device telemetry data from the TelemetryData DynamoDB table. If only SerialNumber is provided, returns the latest single record. If SerialNumber, startDate, and endDate are all provided, returns all records within that date range sorted chronologically (ascending).",
+        "operationId": "getTelemetryData",
+        "tags": ["TelemetryData"],
+        "parameters": [
+          {
+            "name": "SerialNumber",
+            "in": "query",
+            "description": "The serial number of the device. This is the partition key (PK) of the TelemetryData table.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "DEVICE123"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "The start date for the date range query. Used with endDate to filter records by the sort key (SK). If omitted (along with endDate), only the latest record is returned.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2023-01-01"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "The end date for the date range query. Used with startDate to filter records by the sort key (SK). If omitted (along with startDate), only the latest record is returned.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2023-12-31"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved telemetry data. Returns a single object (latest record) when only SerialNumber is provided, or an array of objects when startDate and endDate are also provided.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryResponse"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string",
+                  "example": "*"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required SerialNumber parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Missing SerialNumber"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No data found for the given parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "No data found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryErrorResponse"
+                },
+                "example": {
+                  "message": "Server error",
+                  "error": "Error details"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data": {
+      "post": {
+        "summary": "Save Sentinel-2 Data",
+        "description": "Uploads Sentinel-2 data to an S3 bucket (sentinel2-all-bands). The data is stored as a JSON file at the key: {dataType_lowercase}/{serialNumber}/{serialNumber}.json. A server-generated UTC ISO 8601 timestamp is added to the stored payload.",
+        "operationId": "saveSentinel2Data",
+        "tags": ["Sentinel2"],
+        "requestBody": {
+          "description": "Sentinel-2 data payload to be saved.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Sentinel2Request"
+              },
+              "example": {
+                "serialNumber": "S180H120L126-02-1220:47:59",
+                "dataType": "SENTINEL2",
+                "result": {
+                  "band1": 0.45,
+                  "band2": 0.67,
+                  "band3": 0.88
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data saved successfully to S3.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2PostResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Data saved to S3",
+                  "key": "sentinel2/S180H120L126-02-1220:47:59/S180H120L126-02-1220:47:59.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Missing required fields in the request body, or invalid JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2ErrorResponse"
+                },
+                "examples": {
+                  "missingFields": {
+                    "summary": "Missing required fields",
+                    "value": {
+                      "success": false,
+                      "message": "serialNumber, dataType and result required"
+                    }
+                  },
+                  "invalidJson": {
+                    "summary": "Invalid JSON body",
+                    "value": {
+                      "success": false,
+                      "message": "Invalid JSON in request body"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Method not allowed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Internal server error message",
+                  "stack": "Traceback details..."
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Fetch Sentinel-2 Data",
+        "description": "Retrieves all Sentinel-2 JSON objects from the S3 bucket for a specific serial number and data type. Lists and reads every object under the S3 prefix: {dataType_lowercase}/{serialNumber}/.",
+        "operationId": "fetchSentinel2Data",
+        "tags": ["Sentinel2"],
+        "parameters": [
+          {
+            "name": "serialNumber",
+            "in": "query",
+            "description": "Unique identifier to fetch data for.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "S180H120L126-02-1220:47:59"
+          },
+          {
+            "name": "dataType",
+            "in": "query",
+            "description": "The type of data to fetch (e.g., SENTINEL2).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "SENTINEL2"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched data objects.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2GetResponse"
+                },
+                "example": {
+                  "success": true,
+                  "count": 1,
+                  "data": [
+                    {
+                      "serialNumber": "S180H120L126-02-1220:47:59",
+                      "dataType": "SENTINEL2",
+                      "timestamp": "2026-08-01T10:30:00.000Z",
+                      "result": {
+                        "band1": 0.45,
+                        "band2": 0.67
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Missing query parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "serialNumber and dataType required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No data found for the given criteria.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No data found"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Method not allowed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sentinel2ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Internal server error message",
+                  "stack": "Traceback details..."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ndvi": {
+      "get": {
+        "summary": "Fetch NDVI Historical Data",
+        "description": "Retrieves the latest NDVI historical data for a specific plot from the ndviHistoricalData DynamoDB table. Queries using PK and an SK prefix of PD-{PlotId}, sorted descending (newest first) with a limit of 1 to return only the most recent record. The response payload includes plot metadata, NDVI value (from polygonAverageNDVI), polygon points, pixel grid data, and extracted weather information.",
+        "operationId": "fetchNDVIHistoricalData",
+        "tags": ["NDVI"],
+        "parameters": [
+          {
+            "name": "PK",
+            "in": "query",
+            "description": "Partition key for the query (typically representing a user or organization ID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "ORG-123"
+          },
+          {
+            "name": "PlotId",
+            "in": "query",
+            "description": "The unique identifier of the plot. Used to construct the SK prefix PD-{PlotId}.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "P-456"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched the latest NDVI data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NDVIResponse"
+                },
+                "example": {
+                  "payload": {
+                    "PK": "ORG-123",
+                    "SK": "PD-P-456#20240808",
+                    "SerialNumber": "DEVICE-001",
+                    "Date": "2024-08-08T00:00:00Z",
+                    "CropType": "Wheat",
+                    "SoilType": "Loam",
+                    "PlotId": "P-456",
+                    "PlotLocation": "North Field",
+                    "latitude": 40.7128,
+                    "longitude": -74.006,
+                    "NDVI": 0.65,
+                    "polygonPoints": [
+                      [40.7128, -74.006],
+                      [40.7138, -74.006],
+                      [40.7138, -74.007]
+                    ],
+                    "totalPixels": 250,
+                    "pixelNDVIGrid": [],
+                    "weather": {
+                      "temperature": 25,
+                      "humidity": 60,
+                      "uvIndex": 8,
+                      "rainfall": 0,
+                      "sunrise": "06:15:00",
+                      "sunset": "20:00:00",
+                      "maxTemperature": 30,
+                      "minTemperature": 20,
+                      "maxHeatIndex": 32,
+                      "windSpeed": 12.5,
+                      "windDirection": "NW"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Missing PK or PlotId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "PK and PlotId are required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No NDVI data found for this plot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "No NDVI data found for this plot"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Internal server error",
+                  "error": "Error details"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plotDetails": {
+      "post": {
+        "summary": "Save Plot Details",
+        "description": "Saves plot details to the MainTransactionData DynamoDB table. Generates a UUID for the plot (PlotId) and stores the item with PK set to userId and SK set to PD-{UUID}. The event body is received directly (not wrapped in event.body), so the Lambda reads fields directly from the event object.",
+        "operationId": "savePlotDetails",
+        "tags": ["PlotDetails"],
+        "requestBody": {
+          "description": "Plot details payload containing crop, location, and farm data.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlotDetailsRequest"
+              },
+              "example": {
+                "userId": "user-123",
+                "date": "2023-10-01",
+                "name": "Plot 1",
+                "latitude": 12.34,
+                "longitude": 56.78,
+                "cropType": "Wheat",
+                "variety": "Durum",
+                "serialNumber": "SN-001",
+                "soilType": "Loamy",
+                "plotLocation": "North Field",
+                "polygonPoints": [{"lat": 12.34, "lng": 56.78}],
+                "root_depth": 0.5,
+                "Irrigation_efficiency": 0.8,
+                "target_yield_t_acre": 2.0,
+                "fertilizer_application_method": "Broadcast",
+                "area_of_field_acre": 10,
+                "age_years": 1,
+                "plant_density_per_acre": 4000
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plot saved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlotDetailsResponse"
+                },
+                "example": {
+                  "message": "Plot saved successfully",
+                  "plotId": "abc-1234-defg-5678"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Missing required fields"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error (e.g., DynamoDB errors).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "error": "DynamoDB error details"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/updateSoilData": {
+      "post": {
+        "summary": "Update Soil Data",
+        "description": "Updates soil-related information for an existing plot in the MainTransactionData DynamoDB table. The item is identified by PK=userId and SK=PD-{plotId}. Updates the fields: soil_ph, e_c, organic_carbon, soil_test, and automatically sets updatedAt to the current UTC ISO 8601 timestamp. Returns the fully updated item attributes (ReturnValues=ALL_NEW).",
+        "operationId": "updateSoilData",
+        "tags": ["UpdateSoilData"],
+        "requestBody": {
+          "description": "Soil data update payload. The body may be a JSON string in event.body or a pre-parsed dict.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSoilDataRequest"
+              },
+              "example": {
+                "userId": "USER123",
+                "plotId": "abc456",
+                "soil_ph": 6.5,
+                "e_c": 1.2,
+                "organic_carbon": 2.5,
+                "soil_test": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Soil data updated successfully. Returns the fully updated DynamoDB item.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSoilDataResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "PK": "USER123",
+                    "SK": "PD-abc456",
+                    "soil_ph": 6.5,
+                    "e_c": 1.2,
+                    "organic_carbon": 2.5,
+                    "soil_test": true,
+                    "updatedAt": "2026-09-05T10:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "success": false,
+                  "error": "Error message details"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/updatePlot/{plotId}": {
+      "post": {
+        "summary": "Update Plot",
+        "description": "Dynamically updates a plot's information in the MainTransactionData DynamoDB table. The plotId can be provided as a path parameter (priority) or as a query string parameter. The userId is required in the JSON body and is used as the partition key (PK). All other fields in the body (except userId) are treated as dynamic update fields. Uses ConditionExpression attribute_exists(PK) to ensure the item exists before updating. Returns the fully updated item attributes (ReturnValues=ALL_NEW).",
+        "operationId": "updatePlot",
+        "tags": ["UpdatePlot"],
+        "parameters": [
+          {
+            "name": "plotId",
+            "in": "path",
+            "description": "The unique identifier of the plot. Forms the sort key as PD-{plotId}. Can alternatively be passed as a query parameter.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123"
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body containing userId (required) and any fields to update. All fields except userId are dynamically applied as update expressions.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlotRequest"
+              },
+              "example": {
+                "userId": "user123",
+                "cropType": "Cotton",
+                "soilType": "Black Soil"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plot updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePlotResponse"
+                },
+                "example": {
+                  "message": "Plot updated successfully",
+                  "data": {
+                    "PK": "user123",
+                    "SK": "PD-123",
+                    "cropType": "Cotton",
+                    "soilType": "Black Soil"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string",
+                  "example": "*"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. Missing required fields or no update fields provided.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "missingBody": {
+                    "summary": "Request body is missing",
+                    "value": {
+                      "message": "Request body is required"
+                    }
+                  },
+                  "missingPlotId": {
+                    "summary": "plotId is missing",
+                    "value": {
+                      "message": "plotId is required"
+                    }
+                  },
+                  "missingUserId": {
+                    "summary": "userId is missing",
+                    "value": {
+                      "message": "userId is required"
+                    }
+                  },
+                  "noUpdateFields": {
+                    "summary": "No fields to update",
+                    "value": {
+                      "message": "No fields provided for update"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Error details"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getTimeseriesData": {
+      "get": {
+        "summary": "Get Timeseries Data",
+        "description": "Retrieves historical NDVI and weather time-series data for a plot between a specified start date and end date from the ndviHistoricalData DynamoDB table. Constructs SK range as PD-{PlotId}-{startDate} to PD-{PlotId}-{endDate} and queries with ScanIndexForward=True (ascending order, oldest to newest). The response contains a rich set of fields including plot details, NDVI, current weather, temperature metrics, wind, clouds, rain/precipitation, storms, weather descriptions, sun events, moon events, and timezone.",
+        "operationId": "getTimeseriesData",
+        "tags": ["GetTimeseriesData"],
+        "parameters": [
+          {
+            "name": "PK",
+            "in": "query",
+            "description": "Partition key (typically a user or organization ID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "USER123"
+          },
+          {
+            "name": "PlotId",
+            "in": "query",
+            "description": "The unique identifier of the plot.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "PLOT001"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "The start date for the time-series range.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2026-01-01"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "The end date for the time-series range.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2026-01-31"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved time-series data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeseriesResponse"
+                },
+                "example": {
+                  "count": 1,
+                  "startDate": "2026-01-01",
+                  "endDate": "2026-01-31",
+                  "data": [
+                    {
+                      "date": "2026-01-01",
+                      "plotId": "PLOT001",
+                      "plotName": "Demo Plot",
+                      "cropType": "Rice",
+                      "soilType": "Clay",
+                      "plotLocation": "Bangalore",
+                      "latitude": 12.9716,
+                      "longitude": 77.5946,
+                      "ndvi": 0.72,
+                      "temperature": 25,
+                      "humidity": 60,
+                      "rainfall": 5,
+                      "uvIndex": 7,
+                      "maxTemperature": 30,
+                      "minTemperature": 20,
+                      "feelsLikeMax": 32,
+                      "feelsLikeMin": 18,
+                      "heatIndex": 33,
+                      "windSpeed": 12,
+                      "windSpeedUnit": "km/h",
+                      "windGust": 20,
+                      "windGustUnit": "km/h",
+                      "windDirection": "NW",
+                      "windDirectionDegrees": 315,
+                      "cloudCover": 40,
+                      "rainProbability": 30,
+                      "precipitationType": "rain",
+                      "rainfallForecast": 5.2,
+                      "rainfallUnit": "mm",
+                      "thunderstormProbability": 10,
+                      "weatherCondition": "Partly Cloudy",
+                      "weatherType": "PARTLY_CLOUDY",
+                      "forecastHumidity": 65,
+                      "sunrise": "06:30:00",
+                      "sunset": "18:15:00",
+                      "moonPhase": "WAXING_CRESCENT",
+                      "moonrise": "09:00:00",
+                      "moonset": "21:00:00",
+                      "timezone": "Asia/Kolkata"
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string",
+                  "example": "*"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. One or more required query parameters are missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "PK, PlotId, startDate, endDate are required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryErrorResponse"
+                },
+                "example": {
+                  "message": "Server error",
+                  "error": "Error details"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retrieveAverageData": {
+      "post": {
+        "summary": "Retrieve Average Data",
+        "description": "Retrieves data from the RawData DynamoDB table based on a SerialNumber and date range. The query behavior depends on the span of the date range: for ranges shorter than 20 days, the Lambda queries using raw Unix-second sort keys (SK BETWEEN startDate AND endDate); for ranges of 20 days or more, the Lambda queries using the DialyAverage- sort-key prefix (SK BETWEEN DialyAverage-startDate AND DialyAverage-endDate). Start dates are set to 00:00:00 and end dates to 23:59:59.999 before converting to Unix seconds. The event fields are read directly from the event object (not from event.body).",
+        "operationId": "retrieveAverageData",
+        "tags": ["RetrieveAverageData"],
+        "requestBody": {
+          "description": "The Lambda reads SerialNumber, startDate, and endDate directly from the event payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AverageDataRequest"
+              },
+              "example": {
+                "SerialNumber": "SN001",
+                "startDate": "2026-08-01",
+                "endDate": "2026-08-10"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved data. The response body is a JSON string containing an array of DynamoDB items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AverageDataResponse"
+                },
+                "example": {
+                  "body": "[]"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error occurred during data retrieval.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "string",
+                      "description": "JSON string containing the error object."
+                    }
+                  }
+                },
+                "example": {
+                  "body": "{\"error\": \"Error details\"}"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tokenToDB": {
+      "post": {
+        "summary": "Store or Update Expo Push Token",
+        "description": "Stores or updates an Expo push notification token in the MainTransactionData DynamoDB table. The Lambda first queries for an existing item with PK=userID and SK beginning with 'ExpoToken'. If an existing record is found, the Token attribute is updated with the new tokenId and the updated attributes are returned. If no existing record is found, a new item is created with PK=userID, SK=ExpoToken-{UUID}, and Token=tokenId. The event fields are read directly from the event object (not from event.body).",
+        "operationId": "tokenToDB",
+        "tags": ["TokenToDB"],
+        "requestBody": {
+          "description": "Token storage payload containing the user ID and the Expo push token.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenToDBRequest"
+              },
+              "example": {
+                "userID": "user123",
+                "tokenId": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token stored or updated successfully. Two possible response shapes exist depending on whether an existing ExpoToken record was found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "description": "Returned when an existing ExpoToken record is found and updated. The body contains the fully updated DynamoDB item attributes.",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 200
+                        },
+                        "body": {
+                          "type": "object",
+                          "description": "The updated DynamoDB item attributes (ALL_NEW).",
+                          "properties": {
+                            "PK": {
+                              "type": "string"
+                            },
+                            "SK": {
+                              "type": "string"
+                            },
+                            "Token": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "description": "Returned when no existing ExpoToken record is found and a new item is created.",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 200
+                        },
+                        "body": {
+                          "type": "string",
+                          "example": "Successfully created Item"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "existingTokenUpdated": {
+                    "summary": "Existing ExpoToken record updated",
+                    "value": {
+                      "statusCode": 200,
+                      "body": {
+                        "PK": "user123",
+                        "SK": "ExpoToken-abc-123",
+                        "Token": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+                      }
+                    }
+                  },
+                  "newTokenCreated": {
+                    "summary": "New ExpoToken record created",
+                    "value": {
+                      "statusCode": 200,
+                      "body": "Successfully created Item"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error updating or creating the token item.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 500
+                    },
+                    "body": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "statusCode": 500,
+                  "body": "Error updating or creating item"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Getuserdetailsloginform": {
+      "get": {
+        "summary": "Get User Details (Login Form)",
+        "description": "Retrieves user details from an Amazon Cognito User Pool using the AdminGetUser API. The Lambda reads the username from the event object and returns the user's attributes (UserAttributes array). The Cognito User Pool ID is configured internally in the Lambda and is not exposed as an API parameter.",
+        "operationId": "getUserDetailsLoginForm",
+        "tags": ["Getuserdetailsloginform"],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "description": "The Cognito username to look up.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "example-user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user attributes from Cognito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDetailsResponse"
+                },
+                "example": {
+                  "statusCode": 200,
+                  "body": [
+                    {
+                      "Name": "sub",
+                      "Value": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    },
+                    {
+                      "Name": "email_verified",
+                      "Value": "true"
+                    },
+                    {
+                      "Name": "email",
+                      "Value": "user@example.com"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error retrieving user attributes from Cognito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 500
+                    },
+                    "body": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "statusCode": 500,
+                  "body": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TelemetryResponse": {
+        "description": "Telemetry data response. When only SerialNumber is provided, a single object is returned. When startDate and endDate are also provided, an array of objects is returned.",
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Single record (latest) when only SerialNumber is queried.",
+            "additionalProperties": true
+          },
+          {
+            "type": "array",
+            "description": "Array of records for the date range.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        ]
+      },
+      "TelemetryErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error description."
+          },
+          "error": {
+            "type": "string",
+            "description": "Detailed error message from the exception."
+          }
+        }
+      },
+      "Sentinel2Request": {
+        "type": "object",
+        "required": ["serialNumber", "dataType", "result"],
+        "properties": {
+          "serialNumber": {
+            "type": "string",
+            "description": "Unique identifier for the Sentinel-2 data batch."
+          },
+          "dataType": {
+            "type": "string",
+            "description": "The type of data being uploaded (e.g., SENTINEL2). Used to construct the S3 key prefix (lowercased)."
+          },
+          "result": {
+            "type": "object",
+            "description": "The actual data or measurements to store.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "Sentinel2PostResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "description": "The S3 key where the data was saved."
+          }
+        }
+      },
+      "Sentinel2GetResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of files retrieved."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "serialNumber": {
+                  "type": "string"
+                },
+                "dataType": {
+                  "type": "string"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "description": "UTC ISO 8601 timestamp of when the data was saved."
+                },
+                "result": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "Sentinel2ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "Error description."
+          },
+          "stack": {
+            "type": "string",
+            "description": "Stack trace (returned on 500 errors)."
+          }
+        }
+      },
+      "NDVIResponse": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "PK": {
+                "type": "string"
+              },
+              "SK": {
+                "type": "string"
+              },
+              "SerialNumber": {
+                "type": "string"
+              },
+              "Date": {
+                "type": "string"
+              },
+              "CropType": {
+                "type": "string"
+              },
+              "SoilType": {
+                "type": "string"
+              },
+              "PlotId": {
+                "type": "string"
+              },
+              "PlotLocation": {
+                "type": "string"
+              },
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "NDVI": {
+                "type": "number",
+                "description": "The polygon average NDVI value (sourced from the polygonAverageNDVI field in DynamoDB)."
+              },
+              "polygonPoints": {
+                "type": "array",
+                "items": {},
+                "description": "Array of polygon coordinate points."
+              },
+              "totalPixels": {
+                "type": "integer"
+              },
+              "pixelNDVIGrid": {
+                "type": "array",
+                "items": {},
+                "description": "Grid of per-pixel NDVI values."
+              },
+              "weather": {
+                "$ref": "#/components/schemas/NDVIWeather"
+              }
+            }
+          }
+        }
+      },
+      "NDVIWeather": {
+        "type": "object",
+        "description": "Weather data extracted from the DynamoDB item's weather field.",
+        "properties": {
+          "temperature": {
+            "type": "number"
+          },
+          "humidity": {
+            "type": "number"
+          },
+          "uvIndex": {
+            "type": "number"
+          },
+          "rainfall": {
+            "type": "number"
+          },
+          "sunrise": {
+            "type": "string",
+            "description": "Extracted from weather.raw.forecastDays[0].sunEvents.sunriseTime."
+          },
+          "sunset": {
+            "type": "string",
+            "description": "Extracted from weather.raw.forecastDays[0].sunEvents.sunsetTime."
+          },
+          "maxTemperature": {
+            "type": "number",
+            "description": "Extracted from weather.raw.forecastDays[0].maxTemperature.degrees."
+          },
+          "minTemperature": {
+            "type": "number",
+            "description": "Extracted from weather.raw.forecastDays[0].minTemperature.degrees."
+          },
+          "maxHeatIndex": {
+            "type": "number",
+            "description": "Extracted from weather.raw.forecastDays[0].maxHeatIndex.degrees."
+          },
+          "windSpeed": {
+            "type": "number",
+            "description": "Extracted from weather.raw.forecastDays[0].daytimeForecast.wind.speed.value."
+          },
+          "windDirection": {
+            "type": "string",
+            "description": "Extracted from weather.raw.forecastDays[0].daytimeForecast.wind.direction.cardinal."
+          }
+        }
+      },
+      "PlotDetailsRequest": {
+        "type": "object",
+        "required": [
+          "userId",
+          "date",
+          "name",
+          "latitude",
+          "longitude",
+          "cropType",
+          "serialNumber",
+          "soilType",
+          "plotLocation",
+          "root_depth",
+          "Irrigation_efficiency",
+          "target_yield_t_acre",
+          "fertilizer_application_method",
+          "area_of_field_acre",
+          "age_years",
+          "plant_density_per_acre"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "cropType": {
+            "type": "string"
+          },
+          "variety": {
+            "type": "string",
+            "description": "Optional. Crop variety."
+          },
+          "serialNumber": {
+            "type": "string"
+          },
+          "soilType": {
+            "type": "string"
+          },
+          "plotLocation": {
+            "type": "string"
+          },
+          "polygonPoints": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Optional. Defaults to an empty array [] if omitted."
+          },
+          "root_depth": {
+            "type": "number"
+          },
+          "Irrigation_efficiency": {
+            "type": "number"
+          },
+          "target_yield_t_acre": {
+            "type": "number"
+          },
+          "fertilizer_application_method": {
+            "type": "string"
+          },
+          "area_of_field_acre": {
+            "type": "number"
+          },
+          "age_years": {
+            "type": "number"
+          },
+          "plant_density_per_acre": {
+            "type": "number"
+          }
+        }
+      },
+      "PlotDetailsResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Plot saved successfully"
+          },
+          "plotId": {
+            "type": "string",
+            "description": "The generated UUID for the plot."
+          }
+        }
+      },
+      "UpdateSoilDataRequest": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "User ID used as the DynamoDB partition key (PK)."
+          },
+          "plotId": {
+            "type": "string",
+            "description": "Plot ID used to construct the sort key as PD-{plotId}."
+          },
+          "soil_ph": {
+            "type": "number",
+            "description": "Soil pH value."
+          },
+          "e_c": {
+            "type": "number",
+            "description": "Electrical conductivity value."
+          },
+          "organic_carbon": {
+            "type": "number",
+            "description": "Organic carbon content."
+          },
+          "soil_test": {
+            "description": "Soil test result (can be boolean or any type)."
+          }
+        }
+      },
+      "UpdateSoilDataResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "description": "The fully updated DynamoDB item attributes (ALL_NEW).",
+            "additionalProperties": true
+          }
+        }
+      },
+      "UpdatePlotRequest": {
+        "type": "object",
+        "required": ["userId"],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "User ID used as the DynamoDB partition key (PK). Required but excluded from the update fields."
+          }
+        },
+        "additionalProperties": {
+          "description": "Any additional fields are treated as dynamic update fields and applied to the DynamoDB item."
+        }
+      },
+      "UpdatePlotResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Plot updated successfully"
+          },
+          "data": {
+            "type": "object",
+            "description": "The fully updated DynamoDB item attributes (ALL_NEW).",
+            "additionalProperties": true
+          }
+        }
+      },
+      "TimeseriesResponse": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Number of records returned."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "The requested start date (echoed back)."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "The requested end date (echoed back)."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeseriesDataItem"
+            }
+          }
+        }
+      },
+      "TimeseriesDataItem": {
+        "type": "object",
+        "description": "A single time-series record containing plot, NDVI, and comprehensive weather data.",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "plotId": {
+            "type": "string"
+          },
+          "plotName": {
+            "type": "string"
+          },
+          "cropType": {
+            "type": "string"
+          },
+          "soilType": {
+            "type": "string"
+          },
+          "plotLocation": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "ndvi": {
+            "type": "number",
+            "description": "Polygon average NDVI value."
+          },
+          "temperature": {
+            "type": "number"
+          },
+          "humidity": {
+            "type": "number"
+          },
+          "rainfall": {
+            "type": "number"
+          },
+          "uvIndex": {
+            "type": "number"
+          },
+          "maxTemperature": {
+            "type": "number"
+          },
+          "minTemperature": {
+            "type": "number"
+          },
+          "feelsLikeMax": {
+            "type": "number"
+          },
+          "feelsLikeMin": {
+            "type": "number"
+          },
+          "heatIndex": {
+            "type": "number"
+          },
+          "windSpeed": {
+            "type": "number"
+          },
+          "windSpeedUnit": {
+            "type": "string"
+          },
+          "windGust": {
+            "type": "number"
+          },
+          "windGustUnit": {
+            "type": "string"
+          },
+          "windDirection": {
+            "type": "string"
+          },
+          "windDirectionDegrees": {
+            "type": "number"
+          },
+          "cloudCover": {
+            "type": "number"
+          },
+          "rainProbability": {
+            "type": "number"
+          },
+          "precipitationType": {
+            "type": "string"
+          },
+          "rainfallForecast": {
+            "type": "number"
+          },
+          "rainfallUnit": {
+            "type": "string"
+          },
+          "thunderstormProbability": {
+            "type": "number"
+          },
+          "weatherCondition": {
+            "type": "string"
+          },
+          "weatherType": {
+            "type": "string"
+          },
+          "forecastHumidity": {
+            "type": "number"
+          },
+          "sunrise": {
+            "type": "string"
+          },
+          "sunset": {
+            "type": "string"
+          },
+          "moonPhase": {
+            "type": "string"
+          },
+          "moonrise": {
+            "type": "string"
+          },
+          "moonset": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        }
+      },
+      "AverageDataRequest": {
+        "type": "object",
+        "required": ["SerialNumber", "startDate", "endDate"],
+        "properties": {
+          "SerialNumber": {
+            "type": "string",
+            "description": "Device serial number used as the DynamoDB partition key (PK) in the RawData table."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date for the query range. Supports ISO 8601, YYYY-MM-DD, YYYY/MM/DD, DD-MM-YYYY, DD/MM/YYYY formats."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date for the query range. Supports the same date formats as startDate."
+          }
+        }
+      },
+      "AverageDataResponse": {
+        "type": "object",
+        "description": "The response wraps the DynamoDB items in a body field as a JSON string.",
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "A JSON string containing an array of DynamoDB items."
+          }
+        }
+      },
+      "TokenToDBRequest": {
+        "type": "object",
+        "required": ["userID", "tokenId"],
+        "properties": {
+          "userID": {
+            "type": "string",
+            "description": "The user ID used as the DynamoDB partition key (PK)."
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "The Expo push notification token to store."
+          }
+        }
+      },
+      "UserDetailsResponse": {
+        "type": "object",
+        "description": "Response containing Cognito user attributes.",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 200
+          },
+          "body": {
+            "type": "array",
+            "description": "Array of Cognito UserAttributes (Name/Value pairs).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Name": {
+                  "type": "string",
+                  "description": "The attribute name (e.g., sub, email, email_verified)."
+                },
+                "Value": {
+                  "type": "string",
+                  "description": "The attribute value."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
